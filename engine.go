@@ -12,65 +12,109 @@ import (
 
 type Engine struct {
 	commands map[string]*Command
+	cmdmap   map[string]*Command
+	noP      map[string]*Command
 }
 
 func NewEngine() *Engine {
 	return &Engine{
 		commands: map[string]*Command{},
+		cmdmap:   map[string]*Command{},
+		noP:      map[string]*Command{},
 	}
 }
 
-func (e *Engine) Load(path string) error {
+func (e *Engine) Load(paths ...string) {
+	for _, p := range paths {
+		e.load(p)
+	}
+}
+
+func (e *Engine) load(path string) {
 	log.Println("Engine Load:", path)
 	body, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	//	log.Println("Engine Load:read:", string(body))
 	commands, err := commandsFromJSON(body)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	//	log.Printf("Engine Load Commands:%+v\n", commands)
 	for _, c := range commands {
 		if _, has := e.commands[c.Name]; has {
-			return fmt.Errorf("Command %s exited.", c.Name)
+			panic(fmt.Errorf("Load %s Error:Command %s exited.", path, c.Name))
 		}
-		e.commands[c.Name] = &c
+		if _, has := e.cmdmap[c.Name]; has {
+			panic(fmt.Errorf("Load %s Error:Command %s exited.", path, c.Name))
+		}
+
+		e.cmdmap[c.Name] = c
+		if c.Require == "" {
+			e.commands[c.Name] = c
+		} else {
+			e.noP[c.Name] = c
+		}
+		for _, sc := range c.SubCommand {
+			if _, has := e.cmdmap[c.Name]; has {
+				panic(fmt.Errorf("Load %s Error:Command %s exited.", path, c.Name))
+			}
+			e.cmdmap[sc.Name] = sc
+		}
 	}
-	return nil
+
 }
 
-func (e *Engine) Start() []error {
-	//	log.Printf("Engine Start Commands:%+v\n", e.commands)
+func (e *Engine) Start() {
+	log.Printf("Engine Check Commands:%+v\n", e.cmdmap)
+	lnoP := len(e.noP)
+
+	for lnoP != 0 {
+		for _, c := range e.noP {
+			//log.Printf("noP:%+v\n", c)
+			if r, ok := e.cmdmap[c.Require]; ok {
+				r.SubCommand = append(r.SubCommand, c)
+				delete(e.noP, c.Name)
+				//	log.Printf("noP Delete:%+v\n", c)
+			}
+		}
+
+		if len(e.noP) == lnoP {
+			panic(fmt.Errorf("Commands [%+v] don't find Require.\n", e.noP))
+		}
+		lnoP = len(e.noP)
+	}
+
+	for k := range e.cmdmap {
+		delete(e.cmdmap, k)
+	}
+
+	log.Printf("Engine Start Commands:%+v\n", e.commands)
 	for _, c := range e.commands {
 		context := NewContext()
-		errs := e.Exec(nil, context, c)
-		if len(errs) != 0 {
-			return errs
-		}
+		e.Exec(nil, context, c)
 	}
-	return []error{}
 }
 
-func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) []error {
+func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
 	log.Printf("Engine Exec:%+v\n", cmd)
 	if req == nil {
 		req = goreq.New()
-		req.Debug = true
+		//req.Debug = true
 	}
 
 	switch cmd.Method {
-	case "GET", "get", "g", "G":
-		req.Get(cmd.URL)
 	case "POST", "post", "p", "P":
-		req.Post(cmd.URL)
+		req.Post(context.P(cmd.URL))
 	case "DELETE", "delete", "d", "D":
-		req.Delete(cmd.URL)
+		req.Delete(context.P(cmd.URL))
+	default:
+		req.Get(context.P(cmd.URL))
 	}
 
 	for k, v := range cmd.Header {
-		req.SetHeader(k, v)
+		req.SetHeader(context.P(k), context.P(v))
 	}
 
 	if cmd.ContentType != "" {
@@ -78,32 +122,26 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) []error 
 	}
 
 	params := map[string]interface{}{}
-	for k, v := range cmd.Params {
-		switch t := v.(type) {
-		case string:
-			params[k] = t
-		default:
-			params[k] = v
-		}
-	}
-	pbody, err := json.Marshal(params)
+	paramstr := context.P(string(*cmd.Params))
+	err := json.Unmarshal([]byte(paramstr), &params)
 	if err != nil {
-		return []error{err}
+		panic(err)
 	}
-	req.Query(string(pbody))
+	req.SendStruct(params)
 
 	_, body, errs := req.EndBytes()
 	if len(errs) != 0 {
-		return errs
+		panic(errs[0])
 	}
 
 	resp := map[string]interface{}{}
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
-		return []error{err}
+		log.Println("Engine Exec Resp Error:", string(body), err)
+		panic(err)
 	}
 
-	log.Printf("Engine Exec Resp:%+v\n", resp)
+	//log.Printf("Engine Exec Resp:%+v\n", resp)
 
 	contexts := map[string]struct{}{}
 	for _, v := range cmd.Context {
@@ -111,20 +149,18 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) []error 
 	}
 
 	for k, v := range cmd.Return {
-		rv, err := checkvalue(strings.Split(k, "."), v, resp)
-		if err != nil {
-			return []error{err}
+		kp := context.P(k)
+		if vp, ok := v.(string); ok {
+			v = context.P(vp)
 		}
-		if _, ok := contexts[k]; ok {
-			context.K(k, rv)
+		rv := checkvalue(strings.Split(kp, "."), v, resp)
+
+		if _, ok := contexts[kp]; ok {
+			context.K(context.P(kp), rv)
 		}
 	}
 
 	for _, c := range cmd.SubCommand {
-		err := e.Exec(req, context, c)
-		if err != nil {
-			return err
-		}
+		e.Exec(req, context, c)
 	}
-	return nil
 }

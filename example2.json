@@ -1,0 +1,36 @@
+[{
+    "name": "login",
+    "url": "http://127.0.0.1:8008/",
+    "method": "post",
+    "params": {
+        "login_name": "13583688255",
+        "password": "159753"
+    },
+    "return": {
+        "login_name": "13583688255",
+        "password": "159753"
+    },
+    "context":[
+        "login_name"
+    ]
+}, {
+    "name": "shops",
+    "require":"login",
+    "url": "http://127.0.0.1:8008/",
+    "method": "post",
+    "params": {
+        "mobile": "{{.login_name}}",
+        "list":[
+            "hello",
+            "add"
+        ],
+        "ints":[
+            0,1,2,3
+        ]
+    },
+    "return": {
+        "mobile": "13583688255",
+        "ints:2":2,
+        "list:1":"add"
+    }
+}]

@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
+	"strconv"
+	"strings"
 )
 
 var (
@@ -11,14 +14,14 @@ var (
 	objectJSONPrefix byte = '{'
 )
 
-func commandsFromJSON(msgBytes []byte) ([]Command, error) {
-	var cmds []Command
+func commandsFromJSON(msgBytes []byte) ([]*Command, error) {
+	cmds := []*Command{}
 	firstByte := msgBytes[0]
 	switch firstByte {
 	case objectJSONPrefix:
 		// single command request
-		var cmd Command
-		err := json.Unmarshal(msgBytes, &cmd)
+		cmd := &Command{}
+		err := json.Unmarshal(msgBytes, cmd)
 		if err != nil {
 			return nil, err
 		}
@@ -33,24 +36,47 @@ func commandsFromJSON(msgBytes []byte) ([]Command, error) {
 	return cmds, nil
 }
 
-func checkvalue(k []string, v interface{}, m map[string]interface{}) (interface{}, error) {
+func checkvalue(k []string, v interface{}, m map[string]interface{}) interface{} {
+	kk := strings.Split(k[0], ":")
 	if len(k) == 1 {
-		log.Println("checkvalue:len==1:", k, v)
-		if mv, ok := m[k[0]]; ok {
-			if fmt.Sprint(v) == fmt.Sprint(mv) {
-				return v, nil
-			} else {
-				return nil, fmt.Errorf("Key:%s Value:%v != %v", k[0], v, mv)
+		log.Println("checkvalue:len==1:", k, v, m)
+		if mv, ok := m[kk[0]]; ok {
+			log.Println("checkvalue:mv:", kk[0], mv, m, reflect.TypeOf(mv))
+			rt := reflect.TypeOf(mv)
+			switch rt.Kind() {
+			case reflect.Slice, reflect.Array:
+				index, err := strconv.Atoi(kk[1])
+				if err != nil {
+					panic(err)
+				}
+				mvr := reflect.ValueOf(mv).Index(index)
+				if fmt.Sprint(v) == fmt.Sprint(mvr) {
+					return mvr.Interface()
+				}
+				panic(fmt.Errorf("Key:%s Value:%v[%v] != %v[%v]", k[0], v, reflect.TypeOf(v).Name(), mvr, mvr.Type().Name()))
+			default:
+				if reflect.TypeOf(v).Name() == reflect.TypeOf(mv).Name() && fmt.Sprint(v) == fmt.Sprint(mv) {
+					return mv
+				}
+				panic(fmt.Errorf("Key:%s Value:%v != %v", k[0], v, mv))
 			}
-		} else {
-			return nil, fmt.Errorf("No Key:%s", k[0])
+			//	log.Println("checkvalue:", reflect.TypeOf(v).Name(), reflect.TypeOf(mv).Name(), v, mv)
+		}
+		panic(fmt.Errorf("No Key:%s", k[0]))
+	}
+	if mv, ok := m[kk[0]]; ok {
+		switch t := mv.(type) {
+		case map[string]interface{}:
+			return checkvalue(k[1:], v, t)
+		case []map[string]interface{}:
+			index, err := strconv.Atoi(kk[1])
+			if err != nil {
+				panic(err)
+			}
+			return checkvalue(k[1:], v, t[index])
+		default:
+			panic(fmt.Errorf("Key %s don't has children.%+v", kk, t))
 		}
 	}
-
-	if mv, ok := m[k[0]]; ok {
-		if nm, ok := mv.(map[string]interface{}); ok {
-			return checkvalue(k[1:], v, nm)
-		}
-	}
-	return nil, fmt.Errorf("No Key:%s", k[0])
+	panic(fmt.Errorf("No Key:%s", k[0]))
 }

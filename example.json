@@ -1,4 +1,4 @@
-{
+[{
     "name": "login",
     "url": "http://192.168.1.200:9000/login",
     "method": "post",
@@ -12,22 +12,20 @@
     "return": {
         "code": 0,
         "data.nickname": "nzlov"
+    }
+}, {
+    "name": "shops",
+    "require":"login",
+    "url": "http://192.168.1.200:9000/shops",
+    "method": "get",
+    "header": {
+        "X-Appkey": "weixin_consume"
     },
-    "subcommand": [
-        {
-            "name": "shops",
-            "url": "http://192.168.1.200:9000/shops",
-            "method": "get",
-            "header": {
-                "X-Appkey": "weixin_consume"
-            },
-            "params": {
-                "fields": "shop_name"
-            },
-            "return": {
-                "code": 0,
-                "data.nickname": "nzlov"
-            }
-        }
-    ]
-}
+    "params": {
+        "fields": "shop_name"
+    },
+    "return": {
+        "code": 0,
+        "data.nickname": "nzlov"
+    }
+}]
