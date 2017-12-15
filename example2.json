@@ -32,5 +32,21 @@
         "mobile": "13583688255",
         "ints:2":2,
         "list:1":"add"
-    }
+    },
+    "context":[
+        "list"
+    ],
+    "subcommand":[
+        {
+            "name": "shopinfo",
+            "url": "http://127.0.0.1:8008/",
+            "method": "post",
+            "params": {
+                "shopinfo": "{{.list}}"
+            },
+            "return": {
+                "shopinfo": "add"
+            }
+        }
+    ]
 }]

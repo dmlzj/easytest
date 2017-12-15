@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"html/template"
+	"log"
 )
 
 type Context struct {
@@ -16,6 +17,7 @@ func NewContext() *Context {
 }
 
 func (c *Context) K(k string, v interface{}) {
+	log.Println("Context K:", k, v)
 	c.value[k] = v
 }
 func (c *Context) V(k string) (interface{}, bool) {

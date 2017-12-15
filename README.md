@@ -37,7 +37,7 @@ type Command struct {
 }
 ```
 ## 配置语法
-### return 取值
+### return context 取值
 * 层级用`.`连接
 * 数组用`:`标记。eg: data.list:0.shopid //表示`data`下的`list`数组中的第一个元素的`shopid`
 ### 引入上下文语法

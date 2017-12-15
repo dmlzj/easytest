@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/smallnest/goreq"
@@ -57,8 +59,8 @@ func (e *Engine) load(path string) {
 			e.noP[c.Name] = c
 		}
 		for _, sc := range c.SubCommand {
-			if _, has := e.cmdmap[c.Name]; has {
-				panic(fmt.Errorf("Load %s Error:Command %s exited.", path, c.Name))
+			if _, has := e.cmdmap[sc.Name]; has {
+				panic(fmt.Errorf("Load %s Error:Command %s exited.", path, sc.Name))
 			}
 			e.cmdmap[sc.Name] = sc
 		}
@@ -148,15 +150,25 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
 		contexts[v] = struct{}{}
 	}
 
+	//TODO 只能上下文确认返回值。。。
 	for k, v := range cmd.Return {
 		kp := context.P(k)
 		if vp, ok := v.(string); ok {
 			v = context.P(vp)
 		}
-		rv := checkvalue(strings.Split(kp, "."), v, resp)
+		mv := checkvalue(strings.Split(kp, "."), v, resp)
 
 		if _, ok := contexts[kp]; ok {
-			context.K(context.P(kp), rv)
+			if kps := strings.Split(kp, ":"); len(kps) == 2 {
+				index, err := strconv.Atoi(kps[1])
+				if err != nil {
+					panic(err)
+				}
+				mvr := reflect.ValueOf(mv).Index(index)
+				context.K(context.P(kps[0]), mvr)
+			} else {
+				context.K(context.P(kp), mv)
+			}
 		}
 	}
 

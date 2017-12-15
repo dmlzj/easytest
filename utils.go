@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -39,9 +38,9 @@ func commandsFromJSON(msgBytes []byte) ([]*Command, error) {
 func checkvalue(k []string, v interface{}, m map[string]interface{}) interface{} {
 	kk := strings.Split(k[0], ":")
 	if len(k) == 1 {
-		log.Println("checkvalue:len==1:", k, v, m)
+		//log.Println("checkvalue:len==1:", k, v, m)
 		if mv, ok := m[kk[0]]; ok {
-			log.Println("checkvalue:mv:", kk[0], mv, m, reflect.TypeOf(mv))
+			//	log.Println("checkvalue:mv:", kk[0], mv, m, reflect.TypeOf(mv))
 			rt := reflect.TypeOf(mv)
 			switch rt.Kind() {
 			case reflect.Slice, reflect.Array:
@@ -51,7 +50,7 @@ func checkvalue(k []string, v interface{}, m map[string]interface{}) interface{}
 				}
 				mvr := reflect.ValueOf(mv).Index(index)
 				if fmt.Sprint(v) == fmt.Sprint(mvr) {
-					return mvr.Interface()
+					return mv
 				}
 				panic(fmt.Errorf("Key:%s Value:%v[%v] != %v[%v]", k[0], v, reflect.TypeOf(v).Name(), mvr, mvr.Type().Name()))
 			default:
