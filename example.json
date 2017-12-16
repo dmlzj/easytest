@@ -16,6 +16,24 @@
     "context":{
         "data.nickname": "userid"
     }
+},{
+    "name": "login1",
+    "url": "http://192.168.1.200:9000/login",
+    "method": "post",
+    "header": {
+        "X-Appkey": "weixin_consume"
+    },
+    "params": {
+        "login_name": "1358368222255",
+        "password": "159753"
+    },
+    "return": {
+        "code": 0,
+        "data.nickname": "nzlov"
+    },
+    "context":{
+        "data.nickname": "userid"
+    }
 }, {
     "name": "shops",
     "require":"login",
@@ -29,7 +47,7 @@
         "fields": "shopid,shop_name"
     },
     "return": {
-        "code": "0",
+        "code": "1",
         "data.list.1.shop_name": "亿家店"
     }
 }]

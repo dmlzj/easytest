@@ -15,6 +15,15 @@ func NewContext() *Context {
 		value: map[string]interface{}{},
 	}
 }
+func NewContextWithCopy(c *Context) *Context {
+	m := map[string]interface{}{}
+	for k, v := range c.value {
+		m[k] = v
+	}
+	return &Context{
+		value: m,
+	}
+}
 
 func (c *Context) K(k string, v interface{}) {
 	log.Println("Context K:", k, v)

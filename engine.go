@@ -5,22 +5,36 @@ import (
 	"io/ioutil"
 	"log"
 	"reflect"
+	"sync"
+	"sync/atomic"
 
 	"github.com/smallnest/goreq"
 	"github.com/tidwall/gjson"
 )
 
+type cmderr struct {
+	name string
+	err  error
+}
+
 type Engine struct {
-	commands map[string]*Command
-	cmdmap   map[string]*Command
-	noP      map[string]*Command
+	commands   map[string]*Command
+	cmdmap     map[string]*Command
+	noP        map[string]*Command
+	wait       *sync.WaitGroup
+	cmdNum     int64
+	cmdSuccess int64
+	cmdFailed  int64
+	cmdResult  chan *cmderr
 }
 
 func NewEngine() *Engine {
 	return &Engine{
-		commands: map[string]*Command{},
-		cmdmap:   map[string]*Command{},
-		noP:      map[string]*Command{},
+		commands:  map[string]*Command{},
+		cmdmap:    map[string]*Command{},
+		noP:       map[string]*Command{},
+		wait:      &sync.WaitGroup{},
+		cmdResult: make(chan *cmderr, 10),
 	}
 }
 
@@ -90,19 +104,50 @@ func (e *Engine) Start() {
 		delete(e.cmdmap, k)
 	}
 
-	log.Printf("Engine Start Commands:%+v\n", e.commands)
+	log.Printf("Engine Start %d Commands:%+v\n", len(e.commands), e.commands)
+	e.wait.Add(len(e.commands))
 	for _, c := range e.commands {
-		context := NewContext()
-		e.Exec(nil, context, c)
+		go func(cmd *Command) {
+			defer e.wait.Done()
+			context := NewContext()
+			err := e.Exec(context, cmd)
+			if err != nil {
+				e.cmdResult <- &cmderr{
+					name: cmd.Name,
+					err:  err,
+				}
+				atomic.AddInt64(&e.cmdFailed, 1)
+			}
+		}(c)
+	}
+	errs := map[string]error{}
+	over := make(chan struct{})
+	go func() {
+		for ce := range e.cmdResult {
+			log.Printf("%+v\n", ce)
+			errs[ce.name] = ce.err
+		}
+		over <- struct{}{}
+	}()
+	e.wait.Wait()
+	close(e.cmdResult)
+	<-over
+	log.Println("Start Over.")
+	log.Printf("Exec %d commands.Success %d,Failed %d\n", e.cmdNum, e.cmdSuccess, e.cmdFailed)
+	if e.cmdFailed > 0 {
+		log.Println("Faileds:")
+		for k, v := range errs {
+			log.Printf("Command %s has Error:%v\n", k, v)
+
+		}
 	}
 }
 
-func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
+func (e *Engine) Exec(context *Context, cmd *Command) error {
 	log.Printf("Engine Exec:%+v\n", cmd)
-	if req == nil {
-		req = goreq.New()
-		req.Debug = true
-	}
+	atomic.AddInt64(&e.cmdNum, 1)
+	req := goreq.New()
+	//req.Debug = true
 
 	switch cmd.Method {
 	case "POST", "post", "p", "P":
@@ -126,7 +171,7 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
 
 	_, body, errs := req.EndBytes()
 	if len(errs) != 0 {
-		panic(errs[0])
+		return errs[0]
 	}
 
 	// resp := map[string]interface{}{}
@@ -148,26 +193,39 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
 		}
 		rv := gjsons.Get(kp)
 		if !rv.Exists() {
-			panic(fmt.Errorf("Resp key %s[%s] don't exists.", k, kp))
+			return fmt.Errorf("Resp key %s[%s] don't exists.", k, kp)
 		}
 		rvi := rv.Value()
 		if reflect.TypeOf(v).Name() == reflect.TypeOf(rvi).Name() && fmt.Sprint(v) == fmt.Sprint(rvi) {
 			continue
 		}
-		log.Println("checkvalue:", reflect.TypeOf(v).Name(), reflect.TypeOf(rvi).Name(), v, rvi)
-		panic(fmt.Errorf("Key:%s[%s] Value:%v != %v", k, kp, v, rvi))
+		return fmt.Errorf("Key:%s[%s] Value:%v[%s] != %v[%s]", k, kp, v, reflect.TypeOf(v).Name(), rvi, reflect.TypeOf(rvi).Name())
 	}
 	for k, v := range cmd.Context {
 		kp := context.P(k)
 		v = context.P(v)
 		rv := gjsons.Get(kp)
 		if !rv.Exists() {
-			panic(fmt.Errorf("Resp key %s[%s] don't exists.", k, kp))
+			return fmt.Errorf("Resp key %s[%s] don't exists.", k, kp)
 		}
 		context.K(kp, rv.Value())
 	}
 
 	for _, c := range cmd.SubCommand {
-		e.Exec(req, context, c)
+		e.wait.Add(1)
+		go func(cmd *Command) {
+			defer e.wait.Done()
+			ncontext := NewContextWithCopy(context)
+			err := e.Exec(ncontext, cmd)
+			if err != nil {
+				e.cmdResult <- &cmderr{
+					name: cmd.Name,
+					err:  err,
+				}
+				atomic.AddInt64(&e.cmdFailed, 1)
+			}
+		}(c)
 	}
+	atomic.AddInt64(&e.cmdSuccess, 1)
+	return nil
 }
