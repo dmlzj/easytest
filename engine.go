@@ -10,6 +10,8 @@ import (
 
 	"github.com/smallnest/goreq"
 	"github.com/tidwall/gjson"
+	"github.com/yuin/gopher-lua"
+	"layeh.com/gopher-luar"
 )
 
 type cmderr struct {
@@ -147,7 +149,7 @@ func (e *Engine) Exec(context *Context, cmd *Command) error {
 	log.Printf("Engine Exec:%+v\n", cmd)
 	atomic.AddInt64(&e.cmdNum, 1)
 	req := goreq.New()
-	//req.Debug = true
+	req.Debug = true
 
 	switch cmd.Method {
 	case "POST", "post", "p", "P":
@@ -161,6 +163,11 @@ func (e *Engine) Exec(context *Context, cmd *Command) error {
 	for k, v := range cmd.Header {
 		req.SetHeader(context.P(k), context.P(v))
 	}
+	if len(context.header) > 0 {
+		for k, v := range context.header {
+			req.SetHeader(k, v)
+		}
+	}
 
 	if cmd.ContentType != "" {
 		req.ContentType(cmd.ContentType)
@@ -168,6 +175,21 @@ func (e *Engine) Exec(context *Context, cmd *Command) error {
 
 	paramstr := context.P(string(*cmd.Params))
 	req.Query(paramstr)
+
+	if len(cmd.RequestLua) > 0 {
+		l := lua.NewState()
+		l.SetGlobal("Context", luar.New(l, context))
+		l.SetGlobal("Cmd", luar.New(l, cmd))
+		l.SetGlobal("Req", luar.New(l, req))
+		for _, path := range cmd.RequestLua {
+			err := l.DoFile(path)
+			if err != nil {
+				l.Close()
+				return err
+			}
+		}
+		l.Close()
+	}
 
 	_, body, errs := req.EndBytes()
 	if len(errs) != 0 {
@@ -208,7 +230,21 @@ func (e *Engine) Exec(context *Context, cmd *Command) error {
 		if !rv.Exists() {
 			return fmt.Errorf("Resp key %s[%s] don't exists.", k, kp)
 		}
-		context.K(kp, rv.Value())
+		context.K(v, rv.Value())
+	}
+
+	if len(cmd.NextLua) > 0 {
+		l := lua.NewState()
+		l.SetGlobal("Context", luar.New(l, context))
+		l.SetGlobal("Cmd", luar.New(l, cmd))
+		for _, path := range cmd.NextLua {
+			err := l.DoFile(path)
+			if err != nil {
+				l.Close()
+				return err
+			}
+		}
+		l.Close()
 	}
 
 	for _, c := range cmd.SubCommand {

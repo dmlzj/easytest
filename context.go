@@ -7,12 +7,14 @@ import (
 )
 
 type Context struct {
-	value map[string]interface{}
+	value  map[string]interface{}
+	header map[string]string
 }
 
 func NewContext() *Context {
 	return &Context{
-		value: map[string]interface{}{},
+		value:  map[string]interface{}{},
+		header: map[string]string{},
 	}
 }
 func NewContextWithCopy(c *Context) *Context {
@@ -31,6 +33,14 @@ func (c *Context) K(k string, v interface{}) {
 }
 func (c *Context) V(k string) (interface{}, bool) {
 	v, ok := c.value[k]
+	return v, ok
+}
+func (c *Context) HK(k, v string) {
+	log.Println("Context HK:", k, v)
+	c.header[k] = v
+}
+func (c *Context) HV(k string) (string, bool) {
+	v, ok := c.header[k]
 	return v, ok
 }
 func (c *Context) P(str string) string {

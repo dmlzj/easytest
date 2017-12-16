@@ -1,0 +1,49 @@
+[{
+    "name": "login",
+    "url": "http://192.168.1.200:9000/login",
+    "method": "post",
+    "requestlua":["examples/header.lua"],
+    "params": {
+        "login_name": "13583688255",
+        "password": "159753"
+    },
+    "return": {
+        "code": "0",
+        "data.nickname": "nzlov"
+    },
+    "context":{
+        "data.userid": "userid"
+    }
+},{
+    "name": "login1",
+    "url": "http://192.168.1.200:9000/login",
+    "method": "post",
+    "requestlua":["examples/header.lua"],
+    "params": {
+        "login_name": "1358368222255",
+        "password": "159753"
+    },
+    "return": {
+        "code": 0,
+        "data.nickname": "nzlov"
+    },
+    "context":{
+        "data.nickname": "userid"
+    }
+}, {
+    "name": "shops",
+    "require":"login",
+    "url": "http://192.168.1.200:9000/shops",
+    "method": "get",
+    "requestlua":["examples/header.lua"],
+    "header": {
+        "X-AppUser":"{{.userid}}"
+    },
+    "params": {
+        "fields": "shopid,shop_name"
+    },
+    "return": {
+        "code": "1",
+        "data.list.1.shop_name": "亿家店"
+    }
+}]
