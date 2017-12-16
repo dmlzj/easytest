@@ -10,8 +10,11 @@
         "password": "159753"
     },
     "return": {
-        "code": 0,
+        "code": "0",
         "data.nickname": "nzlov"
+    },
+    "context":{
+        "data.nickname": "userid"
     }
 }, {
     "name": "shops",
@@ -19,13 +22,14 @@
     "url": "http://192.168.1.200:9000/shops",
     "method": "get",
     "header": {
-        "X-Appkey": "weixin_consume"
+        "X-Appkey": "weixin_consume",
+        "X-AppUser":"{{.userid}}"
     },
     "params": {
-        "fields": "shop_name"
+        "fields": "shopid,shop_name"
     },
     "return": {
-        "code": 0,
-        "data.nickname": "nzlov"
+        "code": "0",
+        "data.list.1.shop_name": "亿家店"
     }
 }]

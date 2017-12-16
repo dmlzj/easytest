@@ -1,15 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"reflect"
-	"strconv"
-	"strings"
 
 	"github.com/smallnest/goreq"
+	"github.com/tidwall/gjson"
 )
 
 type Engine struct {
@@ -103,7 +101,7 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
 	log.Printf("Engine Exec:%+v\n", cmd)
 	if req == nil {
 		req = goreq.New()
-		//req.Debug = true
+		req.Debug = true
 	}
 
 	switch cmd.Method {
@@ -123,32 +121,24 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
 		req.ContentType(cmd.ContentType)
 	}
 
-	params := map[string]interface{}{}
 	paramstr := context.P(string(*cmd.Params))
-	err := json.Unmarshal([]byte(paramstr), &params)
-	if err != nil {
-		panic(err)
-	}
-	req.SendStruct(params)
+	req.Query(paramstr)
 
 	_, body, errs := req.EndBytes()
 	if len(errs) != 0 {
 		panic(errs[0])
 	}
 
-	resp := map[string]interface{}{}
-	err = json.Unmarshal(body, &resp)
-	if err != nil {
-		log.Println("Engine Exec Resp Error:", string(body), err)
-		panic(err)
-	}
+	// resp := map[string]interface{}{}
+	// err := json.Unmarshal(body, &resp)
+	// if err != nil {
+	// 	log.Println("Engine Exec Resp Error:", string(body), err)
+	// 	panic(err)
+	// }
+
+	gjsons := gjson.ParseBytes(body)
 
 	//log.Printf("Engine Exec Resp:%+v\n", resp)
-
-	contexts := map[string]struct{}{}
-	for _, v := range cmd.Context {
-		contexts[v] = struct{}{}
-	}
 
 	//TODO 只能上下文确认返回值。。。
 	for k, v := range cmd.Return {
@@ -156,20 +146,25 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) {
 		if vp, ok := v.(string); ok {
 			v = context.P(vp)
 		}
-		mv := checkvalue(strings.Split(kp, "."), v, resp)
-
-		if _, ok := contexts[kp]; ok {
-			if kps := strings.Split(kp, ":"); len(kps) == 2 {
-				index, err := strconv.Atoi(kps[1])
-				if err != nil {
-					panic(err)
-				}
-				mvr := reflect.ValueOf(mv).Index(index)
-				context.K(context.P(kps[0]), mvr)
-			} else {
-				context.K(context.P(kp), mv)
-			}
+		rv := gjsons.Get(kp)
+		if !rv.Exists() {
+			panic(fmt.Errorf("Resp key %s[%s] don't exists.", k, kp))
 		}
+		rvi := rv.Value()
+		if reflect.TypeOf(v).Name() == reflect.TypeOf(rvi).Name() && fmt.Sprint(v) == fmt.Sprint(rvi) {
+			continue
+		}
+		log.Println("checkvalue:", reflect.TypeOf(v).Name(), reflect.TypeOf(rvi).Name(), v, rvi)
+		panic(fmt.Errorf("Key:%s[%s] Value:%v != %v", k, kp, v, rvi))
+	}
+	for k, v := range cmd.Context {
+		kp := context.P(k)
+		v = context.P(v)
+		rv := gjsons.Get(kp)
+		if !rv.Exists() {
+			panic(fmt.Errorf("Resp key %s[%s] don't exists.", k, kp))
+		}
+		context.K(kp, rv.Value())
 	}
 
 	for _, c := range cmd.SubCommand {

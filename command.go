@@ -15,6 +15,6 @@ type Command struct {
 	Params      *json.RawMessage       `json:"params" description:"请求参数"`
 	Return      map[string]interface{} `json:"return" description:"期望返回"`
 	NextJS      []string               `json:"nextjs" description:"执行后续命令前调用的js文件"`
-	Context     []string               `json:"context" description:"上下文"`
+	Context     map[string]string      `json:"context" description:"上下文"`
 	SubCommand  []*Command             `json:"subcommand" description:"子命令"`
 }

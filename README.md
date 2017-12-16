@@ -37,11 +37,42 @@ type Command struct {
 }
 ```
 ## 配置语法
-### return context 取值
-* 层级用`.`连接
-* 数组用`:`标记。eg: data.list:0.shopid //表示`data`下的`list`数组中的第一个元素的`shopid`
+### Path Syntax
+A path is a series of keys separated by a dot. A key may contain special wildcard characters '*' and '?'. To access an array value use the index as the key. To get the number of elements in an array or to access a child path, use the '#' character. The dot and wildcard characters can be escaped with '\'.
+```
+{
+  "name": {"first": "Tom", "last": "Anderson"},
+  "age":37,
+  "children": ["Sara","Alex","Jack"],
+  "fav.movie": "Deer Hunter",
+  "friends": [
+    {"first": "Dale", "last": "Murphy", "age": 44},
+    {"first": "Roger", "last": "Craig", "age": 68},
+    {"first": "Jane", "last": "Murphy", "age": 47}
+  ]
+}
+```
+```
+"name.last"          >> "Anderson"
+"age"                >> 37
+"children"           >> ["Sara","Alex","Jack"]
+"children.#"         >> 3
+"children.1"         >> "Alex"
+"child*.2"           >> "Jack"
+"c?ildren.0"         >> "Sara"
+"fav\.movie"         >> "Deer Hunter"
+"friends.#.first"    >> ["Dale","Roger","Jane"]
+"friends.1.last"     >> "Craig"
+```
+You can also query an array for the first match by using #[...], or find all matches with #[...]#. Queries support the ==, !=, <, <=, >, >= comparison operators and the simple pattern matching % operator.
+```
+friends.#[last=="Murphy"].first    >> "Dale"
+friends.#[last=="Murphy"]#.first   >> ["Dale","Jane"]
+friends.#[age>45]#.last            >> ["Craig","Murphy"]
+friends.#[first%"D*"].last         >> "Murphy"
+```
 ### 引入上下文语法
-在配置文件中使用`{{name}}`形式标记需要引用的上下文语法，程序会自动替换。
+在配置文件中使用`{{.name}}`形式标记需要引用的上下文语法，程序会自动替换。
 ### 请求前后事件处理
 内置`js`脚本,按照配置文件中配置的先后顺序依次调用。
 * 前置脚本传入数据有`context`,`req`
