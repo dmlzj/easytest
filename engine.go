@@ -112,7 +112,7 @@ func (e *Engine) Start() {
 		go func(cmd *Command) {
 			defer e.wait.Done()
 			context := NewContext()
-			err := e.Exec(context, cmd)
+			err := e.Exec(nil, context, cmd)
 			if err != nil {
 				e.cmdResult <- &cmderr{
 					name: cmd.Name,
@@ -145,11 +145,13 @@ func (e *Engine) Start() {
 	}
 }
 
-func (e *Engine) Exec(context *Context, cmd *Command) error {
+func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 	log.Printf("Engine Exec:%+v\n", cmd)
 	atomic.AddInt64(&e.cmdNum, 1)
-	req := goreq.New()
-	req.Debug = true
+	if req == nil {
+		req = goreq.New()
+		req.Debug = true
+	}
 
 	switch cmd.Method {
 	case "POST", "post", "p", "P":
@@ -252,7 +254,7 @@ func (e *Engine) Exec(context *Context, cmd *Command) error {
 		go func(cmd *Command) {
 			defer e.wait.Done()
 			ncontext := NewContextWithCopy(context)
-			err := e.Exec(ncontext, cmd)
+			err := e.Exec(req, ncontext, cmd)
 			if err != nil {
 				e.cmdResult <- &cmderr{
 					name: cmd.Name,
