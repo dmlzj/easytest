@@ -9,12 +9,12 @@ type Command struct {
 	Method      string                 `json:"method" description:"请求方式"`
 	Require     string                 `json:"require" description:"前置需求"`
 	ContentType string                 `json:"contenttype" description:"ContentType"`
-	RequestJS   []string               `json:"requestjs" description:"请求前调用的js文件"`
+	RequestLua  []string               `json:"requestlua" description:"请求前调用的lua文件"`
 	Header      map[string]string      `json:"header" description:"请求头"`
-	Params      map[string]interface{} `json:"params" description:"请求参数"`
+	Params      *json.RawMessage       `json:"params" description:"请求参数"`
 	Return      map[string]interface{} `json:"return" description:"期望返回"`
-	NextJS      []string               `json:"nextjs" description:"执行后续命令前调用的js文件"`
-	Context     []string               `json:"context" description:"返回值保存到上下文"`
+	NextLua     []string               `json:"nextjs" description:"执行后续命令前调用的lua文件"`
+	Context     map[string]string      `json:"context" description:"上下文"`
 	SubCommand  []*Command             `json:"subcommand" description:"子命令"`
 }
 ```
@@ -38,7 +38,7 @@ type Command struct {
 ```
 ## 配置语法
 ### Path Syntax
-A path is a series of keys separated by a dot. A key may contain special wildcard characters '*' and '?'. To access an array value use the index as the key. To get the number of elements in an array or to access a child path, use the '#' character. The dot and wildcard characters can be escaped with '\'.
+路径是由一个点分隔的一系列键。一个键可能包含特殊的通配符`*`和`?`。要访问数组值，请使用索引作为键。要获取数组中的元素数量或访问子路径，请使用`#`字符。点和通配符可以用`\`来转义。
 ```
 {
   "name": {"first": "Tom", "last": "Anderson"},
@@ -64,7 +64,7 @@ A path is a series of keys separated by a dot. A key may contain special wildcar
 "friends.#.first"    >> ["Dale","Roger","Jane"]
 "friends.1.last"     >> "Craig"
 ```
-You can also query an array for the first match by using #[...], or find all matches with #[...]#. Queries support the ==, !=, <, <=, >, >= comparison operators and the simple pattern matching % operator.
+您还可以使用`#[…`或找到与`#[…]#`的所有匹配。查询支持`==`,`!=`,`<`,`<=`,`=>`,`>`比较运算符和简单模式匹配`%`运算符。
 ```
 friends.#[last=="Murphy"].first    >> "Dale"
 friends.#[last=="Murphy"]#.first   >> ["Dale","Jane"]
