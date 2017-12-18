@@ -7,40 +7,40 @@ import (
 )
 
 type Context struct {
-	value  map[string]interface{}
-	header map[string]string
+	Value  map[string]interface{}
+	Header map[string]string
 }
 
 func NewContext() *Context {
 	return &Context{
-		value:  map[string]interface{}{},
-		header: map[string]string{},
+		Value:  map[string]interface{}{},
+		Header: map[string]string{},
 	}
 }
 func NewContextWithCopy(c *Context) *Context {
 	m := map[string]interface{}{}
-	for k, v := range c.value {
+	for k, v := range c.Value {
 		m[k] = v
 	}
 	return &Context{
-		value: m,
+		Value: m,
 	}
 }
 
 func (c *Context) K(k string, v interface{}) {
 	log.Println("Context K:", k, v)
-	c.value[k] = v
+	c.Value[k] = v
 }
 func (c *Context) V(k string) (interface{}, bool) {
-	v, ok := c.value[k]
+	v, ok := c.Value[k]
 	return v, ok
 }
 func (c *Context) HK(k, v string) {
 	log.Println("Context HK:", k, v)
-	c.header[k] = v
+	c.Header[k] = v
 }
 func (c *Context) HV(k string) (string, bool) {
-	v, ok := c.header[k]
+	v, ok := c.Header[k]
 	return v, ok
 }
 func (c *Context) P(str string) string {
@@ -50,7 +50,7 @@ func (c *Context) P(str string) string {
 		panic(err)
 	}
 	body := bytes.NewBufferString("")
-	err = t.Execute(body, c.value)
+	err = t.Execute(body, c.Value)
 	if err != nil {
 		panic(err)
 	}

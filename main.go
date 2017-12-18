@@ -6,7 +6,7 @@ import (
 
 func main() {
 
-	e := NewEngine()
-	e.Load(os.Args[1:]...)
+	e := NewEngine(os.Args[1])
+	e.Load(os.Args[2:]...)
 	e.Start()
 }

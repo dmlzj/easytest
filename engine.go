@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -29,15 +30,30 @@ type Engine struct {
 	cmdSuccess int64
 	cmdFailed  int64
 	cmdResult  chan *cmderr
+	context    *Context
 }
 
-func NewEngine() *Engine {
+func NewEngine(path string) *Engine {
+	if path == "" {
+		panic(fmt.Errorf("config not fount"))
+	}
+	body, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	context := NewContext()
+	err = json.Unmarshal(body, context)
+	if err != nil {
+		panic(err)
+	}
+
 	return &Engine{
 		commands:  map[string]*Command{},
 		cmdmap:    map[string]*Command{},
 		noP:       map[string]*Command{},
 		wait:      &sync.WaitGroup{},
 		cmdResult: make(chan *cmderr, 10),
+		context:   context,
 	}
 }
 
@@ -66,7 +82,6 @@ func (e *Engine) load(path string) {
 		if _, has := e.cmdmap[c.Name]; has {
 			panic(fmt.Errorf("Load %s Error:Command %s exited.", path, c.Name))
 		}
-
 		e.cmdmap[c.Name] = c
 		if c.Require == "" {
 			e.commands[c.Name] = c
@@ -114,7 +129,7 @@ func (e *Engine) Start() {
 	for _, c := range e.commands {
 		go func(cmd *Command) {
 			defer e.wait.Done()
-			context := NewContext()
+			context := NewContextWithCopy(e.context)
 			err := e.Exec(nil, context, cmd)
 			if err != nil {
 				e.cmdResult <- &cmderr{
@@ -168,8 +183,8 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 	for k, v := range cmd.Header {
 		req.SetHeader(context.P(k), context.P(v))
 	}
-	if len(context.header) > 0 {
-		for k, v := range context.header {
+	if len(context.Header) > 0 {
+		for k, v := range context.Header {
 			req.SetHeader(k, v)
 		}
 	}

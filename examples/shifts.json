@@ -1,0 +1,32 @@
+[{
+    "name": "login",
+    "url": "{{.HOST}}/login",
+    "method": "post",
+    "requestlua":["examples/header.lua"],
+    "params": {
+        "login_name": "18264609967",
+        "password": "123456"
+    },
+    "return": {
+        "code": "0",
+        "data.nickname": "唯一度"
+    },
+    "context":{
+        "data.userid": "userid"
+    }
+},{
+    "name": "onshifts",
+    "require":"login",
+    "url": "{{.HOST}}/shifts/onshift",
+    "method": "post",
+    "requestlua":["examples/header.lua"],
+    "header":{
+        "X-Api-ShopId":"5d0935d783270af933e026420c083be5"
+    },
+    "params": {
+        "type": "1"
+    },
+    "return": {
+        "code": "0"
+    }
+}]
