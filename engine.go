@@ -8,7 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/smallnest/goreq"
+	"github.com/nzlov/goreq"
 	"github.com/tidwall/gjson"
 	"github.com/yuin/gopher-lua"
 	"layeh.com/gopher-luar"
