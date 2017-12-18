@@ -225,9 +225,8 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 
 	gjsons := gjson.ParseBytes(body)
 
-	//log.Printf("Engine Exec Resp:%+v\n", resp)
+	//log.Printf("Engine Exec Resp:%+v\n", string(body))
 
-	//TODO 只能上下文确认返回值。。。
 	for k, v := range cmd.Return {
 		kp := context.P(k)
 		if vp, ok := v.(string); ok {
@@ -269,7 +268,7 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 
 	for _, c := range cmd.SubCommand {
 		e.wait.Add(1)
-		go func(cmd *Command) {
+		go func(req *goreq.GoReq, cmd *Command) {
 			defer e.wait.Done()
 			ncontext := NewContextWithCopy(context)
 			err := e.Exec(req, ncontext, cmd)
@@ -280,7 +279,7 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 				}
 				atomic.AddInt64(&e.cmdFailed, 1)
 			}
-		}(c)
+		}(goreq.NewWithGoReq(req), c)
 	}
 	atomic.AddInt64(&e.cmdSuccess, 1)
 	return nil

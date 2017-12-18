@@ -21,10 +21,25 @@
     "method": "post",
     "requestlua":["examples/header.lua"],
     "header":{
-        "X-Api-ShopId":"5d0935d783270af933e026420c083be5"
+        "X-Api-Shopid":"5d0935d783270af933e026420c083be5"
     },
     "params": {
         "type": "1"
+    },
+    "return": {
+        "code": "0"
+    }
+},{
+    "name": "shiftdevices",
+    "require":"login",
+    "url": "{{.HOST}}/shiftdevices",
+    "method": "get",
+    "requestlua":["examples/header.lua"],
+    "header":{
+        "X-Api-Shopid":"5d0935d783270af933e026420c083be5"
+    },
+    "params": {
+        "fields": "device_name"
     },
     "return": {
         "code": "0"
