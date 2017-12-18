@@ -22,8 +22,13 @@ func NewContextWithCopy(c *Context) *Context {
 	for k, v := range c.Value {
 		m[k] = v
 	}
+	h := map[string]string{}
+	for k, v := range c.Header {
+		h[k] = v
+	}
 	return &Context{
-		Value: m,
+		Value:  m,
+		Header: h,
 	}
 }
 
