@@ -25,6 +25,7 @@ type Engine struct {
 	noP        map[string]*Command
 	wait       *sync.WaitGroup
 	cmdNum     int64
+	cmdRunNum  int64
 	cmdSuccess int64
 	cmdFailed  int64
 	cmdResult  chan *cmderr
@@ -76,6 +77,7 @@ func (e *Engine) load(path string) {
 			if _, has := e.cmdmap[sc.Name]; has {
 				panic(fmt.Errorf("Load %s Error:Command %s exited.", path, sc.Name))
 			}
+			sc.Require = ""
 			e.cmdmap[sc.Name] = sc
 		}
 	}
@@ -101,12 +103,13 @@ func (e *Engine) Start() {
 		}
 		lnoP = len(e.noP)
 	}
+	e.cmdNum = int64(len(e.cmdmap))
 
 	for k := range e.cmdmap {
 		delete(e.cmdmap, k)
 	}
 
-	log.Printf("Engine Start %d Commands:%+v\n", len(e.commands), e.commands)
+	log.Printf("Engine Start %d Commands:%+v\n", e.cmdNum, e.commands)
 	e.wait.Add(len(e.commands))
 	for _, c := range e.commands {
 		go func(cmd *Command) {
@@ -135,7 +138,7 @@ func (e *Engine) Start() {
 	close(e.cmdResult)
 	<-over
 	log.Println("Start Over.")
-	log.Printf("Exec %d commands.Success %d,Failed %d\n", e.cmdNum, e.cmdSuccess, e.cmdFailed)
+	log.Printf("Start %d commands,Exec %d commands.Success %d,Failed %d\n", e.cmdNum, e.cmdRunNum, e.cmdSuccess, e.cmdFailed)
 	if e.cmdFailed > 0 {
 		log.Println("Faileds:")
 		for k, v := range errs {
@@ -147,7 +150,7 @@ func (e *Engine) Start() {
 
 func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 	log.Printf("Engine Exec:%+v\n", cmd)
-	atomic.AddInt64(&e.cmdNum, 1)
+	atomic.AddInt64(&e.cmdRunNum, 1)
 	if req == nil {
 		req = goreq.New()
 		req.Debug = true
@@ -223,7 +226,7 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 		if reflect.TypeOf(v).Name() == reflect.TypeOf(rvi).Name() && fmt.Sprint(v) == fmt.Sprint(rvi) {
 			continue
 		}
-		return fmt.Errorf("Key:%s[%s] Value:%v[%s] != %v[%s]", k, kp, v, reflect.TypeOf(v).Name(), rvi, reflect.TypeOf(rvi).Name())
+		return fmt.Errorf("Key:%s[%s] Value:%v[%s] != %v[%s]", k, kp, rvi, reflect.TypeOf(rvi).Name(), v, reflect.TypeOf(v).Name())
 	}
 	for k, v := range cmd.Context {
 		kp := context.P(k)
