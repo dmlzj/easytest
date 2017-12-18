@@ -1,7 +1,7 @@
 # easytest
 API接口自动化测试框架
 ## 配置文件
-`Header`内数据用于所有的用例请求，单优先级不如用例内`header`,`Value`为全局上下文。
+`Header`内数据用于所有的用例请求，但优先级低于用例内`header`,`Value`为全局上下文。
 ```
 {
     "Header":{
