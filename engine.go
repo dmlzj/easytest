@@ -76,6 +76,9 @@ func (e *Engine) load(path string) {
 	}
 	//	log.Printf("Engine Load Commands:%+v\n", commands)
 	for _, c := range commands {
+		if c.Name == "" {
+			panic(fmt.Errorf("json config error:has empty name!"))
+		}
 		if _, has := e.commands[c.Name]; has {
 			panic(fmt.Errorf("Load %s Error:Command %s exited.", path, c.Name))
 		}
@@ -193,8 +196,10 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 		req.ContentType(cmd.ContentType)
 	}
 
-	paramstr := context.P(string(*cmd.Params))
-	req.Query(paramstr)
+	if cmd.Params != nil {
+		paramstr := context.P(string(*cmd.Params))
+		req.Query(paramstr)
+	}
 
 	if len(cmd.RequestLua) > 0 {
 		l := lua.NewState()
