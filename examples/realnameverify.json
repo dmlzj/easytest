@@ -1,0 +1,26 @@
+[{
+    "name": "登陆",
+    "url": "{{.HOST}}/login",
+    "method": "post",
+    "requestlua":["examples/header.lua"],
+
+    "params": {
+        "login_name":"{{.MOBILE}}",
+        "password": "159753"
+    },
+    "return": {
+        "code": "0"
+    },
+    "context":{
+        "data.userid": "userid"
+    }
+},{
+    "name": "上传图片——idcard_front",
+    "require":"登陆",
+    "url": "{{.HOST}}/security/image/add",
+    "method": "post",
+    "requestlua":["examples/header.lua","examples/realnameverify.lua"],
+    "return": {
+        "code": "20118"
+    }
+}]
