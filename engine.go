@@ -195,10 +195,13 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 	if cmd.ContentType != "" {
 		req.ContentType(cmd.ContentType)
 	}
-
+	if cmd.URLParams != nil {
+		paramstr := context.P(string(*cmd.URLParams))
+		req.Query(paramstr)
+	}
 	if cmd.Params != nil {
 		paramstr := context.P(string(*cmd.Params))
-		req.Query(paramstr)
+		req.SendMapString(paramstr)
 	}
 
 	if len(cmd.RequestLua) > 0 {

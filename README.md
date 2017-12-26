@@ -23,6 +23,7 @@ type Command struct {
 	ContentType string                 `json:"contenttype" description:"ContentType"`
 	RequestLua  []string               `json:"requestlua" description:"请求前调用的lua文件"`
 	Header      map[string]string      `json:"header" description:"请求头"`
+	URLParams   *json.RawMessage       `json:"urlparams" description:"url请求参数"`
 	Params      *json.RawMessage       `json:"params" description:"请求参数"`
 	Return      map[string]interface{} `json:"return" description:"期望返回"`
 	NextLua     []string               `json:"nextjs" description:"执行后续命令前调用的lua文件"`
@@ -39,7 +40,7 @@ type Command struct {
     "header": {
         "X-Appkey": "weixin"
     },
-    "params": {
+    "urlparams": {
         "fields": "shop_name"
     },
     "return": {
