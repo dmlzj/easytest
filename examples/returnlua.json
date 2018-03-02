@@ -1,0 +1,17 @@
+[{
+    "name": "login",
+    "url": "http://192.168.1.200:9000/login",
+    "method": "post",
+    "header": {
+        "X-Appkey": "weixin_consume"
+    },
+    "params": {
+        "login_name": "13583688255",
+        "password": "159753"
+    },
+    
+    "returnlua":["examples/check.lua"],
+    "context":{
+        "data.nickname": "userid"
+    }
+}]

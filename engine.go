@@ -12,6 +12,8 @@ import (
 	"github.com/nzlov/goreq"
 	"github.com/tidwall/gjson"
 	"github.com/yuin/gopher-lua"
+
+	luajson "layeh.com/gopher-json"
 	"layeh.com/gopher-luar"
 )
 
@@ -250,6 +252,40 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 		}
 		return fmt.Errorf("Key:%s[%s] Value:%v[%s] != %v[%s]", k, kp, rvi, reflect.TypeOf(rvi).Name(), v, reflect.TypeOf(v).Name())
 	}
+
+	for _, v := range cmd.ReturnLua {
+		l := lua.NewState()
+		luajson.Preload(l)
+		err := l.DoFile(v)
+		if err != nil {
+			l.Close()
+			return err
+		}
+		if err = l.CallByParam(lua.P{
+			Fn:      l.GetGlobal("check"),
+			NRet:    2,
+			Protect: true,
+		}, lua.LString(string(body))); err != nil {
+			return err
+		}
+		ret := l.Get(1)
+		retStr := l.Get(2)
+		l.Pop(2)
+		if b, ok := ret.(lua.LBool); ok {
+			if !b {
+				if s, ok := retStr.(lua.LString); ok {
+					return fmt.Errorf(string(s))
+				} else {
+					return fmt.Errorf("RETURNLUA [%s] return args two don't is string:%v", v, retStr)
+				}
+			}
+		} else {
+			return fmt.Errorf("RETURNLUA [%s] return args one don't is bool:%v", v, ret)
+		}
+
+		l.Close()
+	}
+
 	for k, v := range cmd.Context {
 		kp := context.P(k)
 		v = context.P(v)

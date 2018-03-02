@@ -26,6 +26,7 @@ type Command struct {
 	URLParams   *json.RawMessage       `json:"urlparams" description:"url请求参数"`
 	Params      *json.RawMessage       `json:"params" description:"请求参数"`
 	Return      map[string]interface{} `json:"return" description:"期望返回"`
+	ReturnLua   []string               `json:"returnlua" description:"期望返回lua验证"`
 	NextLua     []string               `json:"nextjs" description:"执行后续命令前调用的lua文件"`
 	Context     map[string]string      `json:"context" description:"上下文"`
 	SubCommand  []*Command             `json:"subcommand" description:"子命令"`
@@ -48,6 +49,13 @@ type Command struct {
         "data.nickname": "nzlov"
     }
 }
+```
+### returnlua
+```
+function check(return)
+  local tb = json.decode(return)
+
+end
 ```
 ## 用例语法
 ### Path Syntax
