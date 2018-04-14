@@ -28,7 +28,7 @@ type Command struct {
 	Return      map[string]interface{} `json:"return" description:"期望返回"`
 	ReturnLua   []string               `json:"returnlua" description:"期望返回lua验证"`
 	NextLua     []string               `json:"nextjs" description:"执行后续命令前调用的lua文件"`
-	Context     map[string]string      `json:"context" description:"上下文"`
+	Context     map[string]string      `json:"context" description:"上下文.value可以通过|进行类型转换，支持:int,float,string"`
 	SubCommand  []*Command             `json:"subcommand" description:"子命令"`
 }
 ```

@@ -300,19 +300,28 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 		if len(vs) == 2 {
 			switch vs[1] {
 			case "int":
-				i, err := strconv.ParseInt(fmt.Sprint(vs[1]), 10, 64)
-				if err != nil {
-					return err
+				switch rv.Type {
+				case gjson.Number:
+					value = int64(rv.Num)
+				case gjson.False:
+					value = int64(0)
+				case gjson.True:
+					value = int64(1)
+				default:
+					i, err := strconv.ParseInt(fmt.Sprintf("%v", rv.Value()), 10, 64)
+					if err != nil {
+						return err
+					}
+					value = i
 				}
-				value = i
 			case "float":
-				f, err := strconv.ParseFloat(fmt.Sprint(vs[1]), 64)
+				f, err := strconv.ParseFloat(fmt.Sprintf("%v", rv.Value()), 64)
 				if err != nil {
 					return err
 				}
 				value = f
 			case "string":
-				value = fmt.Sprint(vs[1])
+				value = fmt.Sprint(rv.Value())
 			}
 		}
 
