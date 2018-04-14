@@ -323,6 +323,8 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 			case "string":
 				value = fmt.Sprint(rv.Value())
 			}
+		} else {
+			value = rv.Value()
 		}
 
 		context.K(vs[0], value)
