@@ -1,0 +1,49 @@
+[
+    {
+        "name": "登陆",
+        "url": "{{.HOST}}/login",
+        "method": "post",
+        "requestlua": [
+            "examples/header.lua"
+        ],
+        "header": {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "params": {
+            "login_name": "18264609967",
+            "password": "123456"
+        },
+        "return": {
+            "code": "0",
+            "data.nickname": "唯一度"
+        },
+        "context": {
+            "data.userid": "userid"
+        }
+    },
+    {
+        "name": "获取类目id",
+        "require": "登陆",
+        "url": "{{.HOST}}/categorys",
+        "method": "get",
+        "requestlua": [
+            "examples/header.lua"
+        ],
+        "header": {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-Api-ShopId": "5d0935d783270af933e026420c083be5"
+        },
+        "urlparams": {
+            "fields":"category_name,categoryid",
+            "sort":"addtime"
+        },
+        "return": {
+            "code": "0",
+            "data.list.0.category_name": "united 餐厅"
+        },
+        "context":{
+            "data.list.0.categoryid":"categoryid"
+        }
+    }
+ 
+]

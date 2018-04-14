@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"reflect"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -293,7 +295,28 @@ func (e *Engine) Exec(req *goreq.GoReq, context *Context, cmd *Command) error {
 		if !rv.Exists() {
 			return fmt.Errorf("Resp key %s[%s] don't exists.", k, kp)
 		}
-		context.K(v, rv.Value())
+		vs := strings.Split(v, "|")
+		var value interface{}
+		if len(vs) == 2 {
+			switch vs[1] {
+			case "int":
+				i, err := strconv.ParseInt(fmt.Sprint(vs[1]), 10, 64)
+				if err != nil {
+					return err
+				}
+				value = i
+			case "float":
+				f, err := strconv.ParseFloat(fmt.Sprint(vs[1]), 64)
+				if err != nil {
+					return err
+				}
+				value = f
+			case "string":
+				value = fmt.Sprint(vs[1])
+			}
+		}
+
+		context.K(vs[0], value)
 	}
 
 	if len(cmd.NextLua) > 0 {
